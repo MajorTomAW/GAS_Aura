@@ -10,6 +10,19 @@
 #include "GameFramework/CharacterMovementComponent.h"
 
 
+// Sets default values
+AAuraPlayer::AAuraPlayer()
+{
+	GetCharacterMovement()->bOrientRotationToMovement = true;
+	GetCharacterMovement()->RotationRate = FRotator(0.f, 540.f, 0.f);
+	GetCharacterMovement()->bConstrainToPlane = true;
+	GetCharacterMovement()->bSnapToPlaneAtStart = true;
+
+	bUseControllerRotationPitch = false;
+	bUseControllerRotationYaw = false;
+	bUseControllerRotationRoll = false;
+}
+
 void AAuraPlayer::PossessedBy(AController* NewController)
 {
 	Super::PossessedBy(NewController);
@@ -24,6 +37,13 @@ void AAuraPlayer::OnRep_PlayerState()
 
 	// Initialize ASC on the Server. This is called on the Client when the PlayerState is replicated.
 	InitAbilityActorInfo();
+}
+
+int32 AAuraPlayer::GetPlayerLevel()
+{
+	const AAuraPlayerState* AuraPlayerState = GetPlayerState<AAuraPlayerState>();
+	check(AuraPlayerState);
+	return AuraPlayerState->GetPlayerLevel();
 }
 
 void AAuraPlayer::InitAbilityActorInfo()
@@ -43,18 +63,6 @@ void AAuraPlayer::InitAbilityActorInfo()
 			AuraHUD->InitOverlay(AuraPlayerController, AuraPlayerState, AbilitySystemComponent, AttributeSet);
 		}
 	}
-}
 
-// Sets default values
-
-AAuraPlayer::AAuraPlayer()
-{
-	GetCharacterMovement()->bOrientRotationToMovement = true;
-	GetCharacterMovement()->RotationRate = FRotator(0.f, 540.f, 0.f);
-	GetCharacterMovement()->bConstrainToPlane = true;
-	GetCharacterMovement()->bSnapToPlaneAtStart = true;
-
-	bUseControllerRotationPitch = false;
-	bUseControllerRotationYaw = false;
-	bUseControllerRotationRoll = false;
+	InitDefaultAttributes();
 }

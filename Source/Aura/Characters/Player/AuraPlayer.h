@@ -14,6 +14,9 @@ class AURA_API AAuraPlayer : public AAuraCharacterBase
 protected:
 	virtual void PossessedBy(AController* NewController) override;
 	virtual void OnRep_PlayerState() override;
+
+	// Combat Interface
+	virtual int32 GetPlayerLevel() override;
 	
 public:
 	// Sets default values for this character's properties
