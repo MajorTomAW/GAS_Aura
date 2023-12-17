@@ -2,13 +2,17 @@
 
 
 #include "AuraPlayerController.h"
+
+#include "AbilitySystemBlueprintLibrary.h"
 #include "EnhancedInputSubsystems.h"
-#include "EnhancedInputComponent.h"
+#include "Aura/AbilitySystem/Component/AuraAbilitySystemComponent.h"
+#include "Aura/Input/Component/AuraInputComponent.h"
 #include "Aura/Interfaces/Enemy/EnemyInterface.h"
 
 AAuraPlayerController::AAuraPlayerController()
 {
 	bReplicates = true;
+
 }
 
 void AAuraPlayerController::PlayerTick(float DeltaTime)
@@ -20,43 +24,44 @@ void AAuraPlayerController::PlayerTick(float DeltaTime)
 
 void AAuraPlayerController::CursorTrace()
 {
-	FHitResult HitResult;
-	GetHitResultUnderCursor(ECC_Visibility, false, HitResult);
-	if (!HitResult.bBlockingHit) return;
+	GetHitResultUnderCursor(ECC_Visibility, false, CursorHit);
+	if (!CursorHit.bBlockingHit) return;
 
 	LastActor = ThisActor;
-	ThisActor = Cast<IEnemyInterface>(HitResult.GetActor());
-
-	/**
-	 * Line trace from cursor. There are several scenarios:
-	 * A. LastActor is null && ThisActor is null
-	 *		- Do nothing
-	 *	B. LastActor is null && ThisActor is valid
-	 *		- Highlight ThisActor
-	 *	C. LastActor is valid && ThisActor is null
-	 *		- Unhighlight LastActor
-	 *	D. Both are valid, but LastActor != ThisActor
-	 *		- Unhighlight LastActor, highlight ThisActor
-	 *	E. Both are valid, and LastActor == ThisActor
-	 *		- Do nothing
-	 */
+	ThisActor = Cast<IEnemyInterface>(CursorHit.GetActor());
 	
-	if (LastActor == nullptr) {
-		if (ThisActor != nullptr) {
-			// Case B
-			ThisActor->HighlightActor();
-		}
-	} else {
-		if (ThisActor == nullptr) {
-			// Case C
-			LastActor->UnHighlightActor();
-		} else if (LastActor != ThisActor) {
-			// Case D
-			LastActor->UnHighlightActor();
-			ThisActor->HighlightActor();
-		}
+	if (LastActor != ThisActor)
+	{
+		if (LastActor) LastActor->UnHighlightActor();
+		if (ThisActor) ThisActor->HighlightActor();
 	}
+}
 
+void AAuraPlayerController::AbilityInputTagPressed(FGameplayTag InputTag)
+{
+	GEngine->AddOnScreenDebugMessage(1, 1, FColor::Red, *InputTag.ToString());
+}
+
+void AAuraPlayerController::AbilityInputTagReleased(FGameplayTag InputTag)
+{
+	if (GetASC() == nullptr) return;
+	GetASC()->AbilityInputTagReleased(InputTag);
+}
+
+void AAuraPlayerController::AbilityInputTagHeld(FGameplayTag InputTag)
+{
+	if (GetASC() == nullptr) return;
+	GetASC()->AbilityInputTagHeld(InputTag);
+}
+
+UAuraAbilitySystemComponent* AAuraPlayerController::GetASC()
+{
+	if ( AuraAbilitySystemComponent != nullptr ) return AuraAbilitySystemComponent;
+	
+	UAbilitySystemComponent* ASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(GetPawn<APawn>());
+	return AuraAbilitySystemComponent = Cast<UAuraAbilitySystemComponent>(ASC);
+
+	//TODO: If ability system component is null, here is the issue
 }
 
 void AAuraPlayerController::BeginPlay()
@@ -75,7 +80,7 @@ void AAuraPlayerController::BeginPlay()
 
 	// Input mode
 	FInputModeGameAndUI InputModeData;
-	InputModeData.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+	InputModeData.SetLockMouseToViewportBehavior(EMouseLockMode::LockAlways);
 	InputModeData.SetHideCursorDuringCapture(false);
 	SetInputMode(InputModeData);
 }
@@ -84,7 +89,6 @@ void AAuraPlayerController::Move(const FInputActionValue& Value)
 {
 	const FVector2D InputAxisVector = Value.Get<FVector2D>();
 	const FRotator YawRotation(0, GetControlRotation().Yaw, 0);
-
 	const FVector ForwardDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
 	const FVector RightDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
 
@@ -99,8 +103,10 @@ void AAuraPlayerController::SetupInputComponent()
 {
 	Super::SetupInputComponent();
 
-	if (UEnhancedInputComponent* EnhancedInputComponent = CastChecked<UEnhancedInputComponent>(InputComponent))
+	if (UAuraInputComponent* AuraInputComponent = CastChecked<UAuraInputComponent>(InputComponent))
 	{
-		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &AAuraPlayerController::Move);
+		AuraInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &ThisClass::Move);
+
+		AuraInputComponent->BindAbilityActions(InputConfig, this, &ThisClass::AbilityInputTagPressed, &ThisClass::AbilityInputTagReleased, &ThisClass::AbilityInputTagHeld);
 	}
 }

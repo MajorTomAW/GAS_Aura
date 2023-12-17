@@ -35,9 +35,9 @@ void AAuraPlayer::OnRep_PlayerState()
 {
 	Super::OnRep_PlayerState();
 
-	// Initialize ASC on the Server. This is called on the Client when the PlayerState is replicated.
 	InitAbilityActorInfo();
 }
+
 
 int32 AAuraPlayer::GetPlayerLevel()
 {
@@ -45,6 +45,7 @@ int32 AAuraPlayer::GetPlayerLevel()
 	check(AuraPlayerState);
 	return AuraPlayerState->GetPlayerLevel();
 }
+
 
 void AAuraPlayer::InitAbilityActorInfo()
 {
@@ -65,4 +66,5 @@ void AAuraPlayer::InitAbilityActorInfo()
 	}
 
 	InitDefaultAttributes();
+	AddCharacterAbilities();
 }

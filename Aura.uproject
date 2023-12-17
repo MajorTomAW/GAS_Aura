@@ -40,5 +40,8 @@
 			"Name": "CommonUI",
 			"Enabled": true
 		}
+	],
+	"TargetPlatforms": [
+		"Windows"
 	]
 }
